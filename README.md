@@ -21,7 +21,7 @@ Welcome to the Travel Story MERN App! This application allows users to share and
   - Express
   - MongoDB (Mongoose)
   - JSON Web Tokens (JWT)
-  - Bcrypt for password hashing
+  - Bcrypt for password hashing bcrypt, salting
   - dotenv for environment variable management
   - CORS for cross-origin resource sharing
 

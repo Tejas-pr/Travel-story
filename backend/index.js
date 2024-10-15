@@ -6,6 +6,7 @@ const cors = require("cors");
 const { default: mongoose } = require("mongoose");
 const config = require("./config.json");
 require("dotenv").config();
+const { z } = require("zod");
 const { authenticateToken } = require("./utilities");
 
 const User = require("./models/user.model");
@@ -18,7 +19,7 @@ app.use(cors({ origin: "*" }));
 mongoose.connect(config.connectionString).then(() => {
     console.log("MongoDB connected successfully");
 
-    const PORT = process.env.PORT || 8000;
+    const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
@@ -30,7 +31,25 @@ mongoose.connect(config.connectionString).then(() => {
 //crete-account
 app.post("/create-account",async (req,res) => {
     try{
-        const {fullName, email, password} = req.body;
+        const requireBody = z.object({
+            fullName: z.string().min(2).max(50),
+            email: z.string().min(2).max(50).email(),
+            password: z.string().min(3).max(50).refine((value) => 
+                /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[@#&*_\-~`+=])/.test(value), {
+                message: "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character (@#&*_-~`+=)."
+            })          
+        });
+
+        const parsedDataWithSuccess = requireBody.safeParse(req.body);
+
+        if(!parsedDataWithSuccess.success){
+            return res.status(400).json({
+                message: "Invalid data",
+                error: parsedDataWithSuccess.error.errors
+            });
+        }
+
+        const {fullName, email, password} = parsedDataWithSuccess.data;
 
         if(!fullName || !email || !password) {
             return res.status(400).json({
@@ -57,7 +76,7 @@ app.post("/create-account",async (req,res) => {
         await user.save();
 
         const accessToken = jwt.sign({ userId : user._id }, process.env.ACCESS_TOKEN_SECRET, {
-            expiresIn: "72h"
+            expiresIn: process.env.JWT_EXPIRATION || "1h",
         });
 
         return res.status(201).json({
