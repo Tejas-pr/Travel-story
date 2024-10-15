@@ -14,7 +14,18 @@ const TravelStory = require("./models/travelStory.model");
 app.use(express.json());
 app.use(cors({ origin: "*" }));
 
-mongoose.connect(config.connectionString);
+// DB connection and Server start
+mongoose.connect(config.connectionString).then(() => {
+    console.log("MongoDB connected successfully");
+
+    const PORT = process.env.PORT || 8000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  }).catch((error) => {
+    console.error("Database connection failed:", error.message);
+    process.exit(1);
+});
 
 //crete-account
 app.post("/create-account",async (req,res) => {
@@ -147,6 +158,32 @@ app.post("/add-travel-story", authenticateToken, async (req,res) => {
             });
         }
 
+        const parsedVisitedDate = new Date(parseInt(visitedDate));
+
+        try{
+            const travelStory = new TravelStory({
+                title,
+                story,
+                visitedLocation,
+                userId,
+                imageUrl,
+                visitedDate: parsedVisitedDate
+            });
+
+            await travelStory.save();
+
+            return res.status(201).json({
+                error: false,
+                travelStory,
+                message: "Travel story added successfully"
+            });
+
+        }catch(error){
+            return res.status(400).json({
+                error: true,
+                message: error.message
+            });
+        }
 
     }catch(error){
         return res.status(500).json({
@@ -156,5 +193,7 @@ app.post("/add-travel-story", authenticateToken, async (req,res) => {
     }
 });
 
-app.listen(8000);
+//Get all travel story
+
+
 module.exports = app;
